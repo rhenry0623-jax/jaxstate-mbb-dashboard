@@ -1479,27 +1479,35 @@ function closeUploadModal(){
 // exposes any write credentials to the browser. Left blank, "Update Data" only updates this browser.
 const UPDATE_WORKER_URL = '__WORKER_URL__';
 
-// Uint8Array -> base64, chunked to avoid call-stack limits on large files.
+// Uint8Array -> base64. Uses the browser's native Blob/FileReader encoder instead of a manual
+// String.fromCharCode/btoa loop: for large files (tens of MB) the manual loop runs synchronously
+// on the main thread and can block the page for a long time with no visible progress, which looks
+// like a freeze and can make it seem like publishing never happened even when it is still working.
 function bytesToBase64(bytes){
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
-  }
-  return btoa(binary);
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([bytes]);
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = () => reject(reader.error || new Error('Could not encode file for upload'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function publishToEveryone(bytes, filename, password, status){
   if (!UPDATE_WORKER_URL || UPDATE_WORKER_URL.indexOf('__WORKER_URL__') !== -1) {
-    return; // relay not configured yet - local-only save already happened
+    status.className = 'upload-status success';
+    status.textContent = 'Loaded and saved in this browser. (Live publishing is not configured for this copy of the dashboard.)';
+    return;
   }
   status.className = 'upload-status pending';
-  status.textContent = 'Saved in this browser. Publishing for everyone...';
+  status.textContent = 'Saved in this browser. Encoding and publishing for everyone — large files can take a minute or two, please keep this tab open...';
   try {
+    const fileBase64 = await bytesToBase64(bytes);
+    status.textContent = 'Saved in this browser. Uploading to publish for everyone — large files can take a minute or two, please keep this tab open...';
     const res = await fetch(UPDATE_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password, filename: filename, fileBase64: bytesToBase64(bytes) })
+      body: JSON.stringify({ password: password, filename: filename, fileBase64: fileBase64 })
     });
     const body = await res.json().catch(() => ({}));
     if (res.ok && body.ok) {
@@ -1536,8 +1544,8 @@ function handleWorkbookFile(file){
       const wb = XLSX.read(bytes, {type:'array', cellDates:true});
       const newData = parseWorkbook(wb);
       applyNewData(newData);
-      status.className = 'upload-status success';
-      status.textContent = 'Loaded ' + newData.order.length + ' players from ' + file.name + '. Saved in this browser for next time.';
+      status.className = 'upload-status pending';
+      status.textContent = 'Loaded ' + newData.order.length + ' players from ' + file.name + ' and saved in this browser. Now publishing for everyone...';
       publishToEveryone(bytes, file.name, password, status);
     } catch(err){
       status.className = 'upload-status error';
