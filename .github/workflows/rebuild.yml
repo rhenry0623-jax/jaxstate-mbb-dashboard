@@ -22,7 +22,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install openpyxl
+        run: pip install openpyxl Pillow
 
       - name: Extract data from spreadsheet
         run: python extract_data2.py
