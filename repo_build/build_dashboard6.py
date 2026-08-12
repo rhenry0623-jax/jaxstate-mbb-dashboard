@@ -1188,6 +1188,7 @@ function renderTrainingGroups(){
       benchRel: (bench!=null && bw) ? bench/bw : null,
       chinups: metricCur(p, 'Chin Up Max Reps'),
       cmj: metricCur(p, 'CMJ'), peakpower: metricCur(p, 'Peak Power'), rsi: metricCur(p, 'RSI'),
+      mph3: metricCur(p, 'MPH by Step 3'),
       sprint: metricCur(p, '10 Yard Sprint'), bodyfat: metricCur(p, 'Body Fat'), leanmass: metricCur(p, 'Lean Mass'),
       trapdlCur: trapdl, benchCur: bench,
       trapdlBest: metricBestVal(p, 'TBDL 1RM (.4m/s)'),
@@ -1198,8 +1199,8 @@ function renderTrainingGroups(){
   const pick = field => Object.fromEntries(order.map(n=>[n, rows[n][field]]));
   const strengthField1 = mode==='absolute' ? 'trapdlCur' : 'trapdlRel';
   const strengthField2 = mode==='absolute' ? 'benchCur' : 'benchRel';
-  const zTrapdl = teamZScores(pick(strengthField1)), zBench = teamZScores(pick(strengthField2)), zChinups = teamZScores(pick('chinups'));
-  const zCmj = teamZScores(pick('cmj')), zPeakpower = teamZScores(pick('peakpower'));
+  const zTrapdl = teamZScores(pick(strengthField1)), zBench = teamZScores(pick(strengthField2));
+  const zCmj = teamZScores(pick('cmj')), zPeakpower = teamZScores(pick('peakpower')), zMph3 = teamZScores(pick('mph3'));
   const zRsi = teamZScores(pick('rsi'));
   const zSprintRaw = teamZScores(pick('sprint'));
   const zSprint = {}; order.forEach(n=>{ zSprint[n] = zSprintRaw[n]==null ? null : -zSprintRaw[n]; }); // lower time = better
@@ -1208,13 +1209,14 @@ function renderTrainingGroups(){
 
   const results = [], needsTesting = [];
   order.forEach(name=>{
-    const strengthZ = composite(zTrapdl[name], zBench[name], zChinups[name]);
-    const powerZ = composite(zCmj[name], zPeakpower[name]);
+    const strengthZ = composite(zTrapdl[name], zBench[name]);
+    const powerZ = composite(zCmj[name], zPeakpower[name], zMph3[name], zRsi[name]);
     const missing = [];
     if (rows[name][strengthField1]==null) missing.push('Trap DL');
     if (rows[name][strengthField2]==null) missing.push('Bench');
     if (rows[name].cmj==null) missing.push('CMJ');
     if (rows[name].peakpower==null) missing.push('Peak Power');
+    if (rows[name].mph3==null) missing.push('MPH by Step 3');
     if (rows[name].rsi==null) missing.push('RSI');
     if (strengthZ==null || powerZ==null){ needsTesting.push({name, pos: rows[name].pos, missing}); return; }
 
@@ -1225,8 +1227,7 @@ function renderTrainingGroups(){
     else bucket = 'Developmental';
 
     const flags = [];
-    const rsiZ = zRsi[name], sprintZ = zSprint[name];
-    if (rsiZ!=null && rsiZ<=-0.5 && (powerZ-rsiZ)>=0.4) flags.push('Reactive strength (RSI) lagging vs. overall power');
+    const sprintZ = zSprint[name];
     if (sprintZ!=null && (powerZ-sprintZ)>=0.75) flags.push('Sprint speed lagging vs. power — mechanics check');
     if (zBodyfat[name]!=null && zBodyfat[name]>=0.75) flags.push('Body comp: higher team-relative body fat');
     if (zLeanmass[name]!=null && zLeanmass[name]<=-0.75) flags.push('Body comp: lower team-relative lean mass');
