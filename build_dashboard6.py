@@ -112,6 +112,17 @@ HTML = r"""<!DOCTYPE html>
   .bar-fill.tier-red { background: var(--tier-red); box-shadow: 0 0 6px 0 rgba(229,72,77,0.85); }
   .bar-fill.tier-gray { background: var(--tier-gray); box-shadow: 0 0 4px 0 rgba(85,87,92,0.7); }
   .bar-val { width:60px; flex-shrink:0; font-size:11.5px; font-variant-numeric: tabular-nums; font-weight:700; }
+  .quad-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:16px; }
+  .quad-col { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .quad-col-head { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; margin-bottom:10px; }
+  .quad-item { padding:8px 0; border-top:1px solid var(--line); }
+  .quad-item:first-of-type { border-top:none; }
+  .quad-tier { display:inline-block; min-width:22px; font-size:11px; font-weight:700; color:var(--muted); margin-right:2px; }
+  .quad-name { font-size:13.5px; font-weight:600; }
+  .quad-pos { font-size:11px; color:var(--muted); margin-left:6px; }
+  .quad-flags { margin-top:4px; }
+  .quad-flag { font-size:11.5px; color:var(--muted); padding-left:24px; line-height:1.5; }
+  .quad-empty { font-size:12.5px; color:var(--muted); font-style:italic; }
   .bar-legend { display:flex; gap:16px; margin-bottom:12px; font-size:11px; color:var(--muted); }
   .bar-legend span { display:inline-flex; align-items:center; gap:5px; }
   .bar-legend i { width:9px; height:9px; border-radius:2px; display:inline-block; }
@@ -357,6 +368,7 @@ HTML = r"""<!DOCTYPE html>
     <button data-tab="strength">Strength</button>
     <button data-tab="fitness">Fitness</button>
     <button data-tab="character">Character</button>
+    <button data-tab="groups">Training Groups</button>
     <button data-tab="players">Players</button>
   </nav>
 </header>
@@ -385,6 +397,10 @@ HTML = r"""<!DOCTYPE html>
     <div class="kpi-row" id="kpiCharacter"></div>
     <div class="panel"><h3>What each trait means (1–5 scale)</h3><div class="trait-defs" id="traitDefsMain"></div></div>
     <div class="table-wrap"><table class="data" id="table-character"></table></div>
+  </div>
+
+  <div class="view" id="view-groups">
+    <div id="groupsContent"></div>
   </div>
 
   <div class="view" id="view-players">
@@ -1117,6 +1133,158 @@ function renderLineChart(containerId, labels, values, unit, compact){
   document.getElementById(containerId).innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${gridLines}${areas}${paths}${dots}${xLabels}</svg>`;
 }
 
+/* ================= TRAINING GROUPS (strength x power quadrant) =================
+   Buckets every player into one of four training profiles using team-relative z-scores:
+   relative strength (Trap DL + Bench, both scaled to bodyweight, plus Chin Ups which are
+   already bodyweight-relative) on one axis, and power (CMJ + Peak Power, already W/kg) on the
+   other. Split at zero on both axes so every player lands in exactly one quadrant. Within each
+   quadrant, players are tiered by how far their point sits from the origin — for the three
+   positive-trait quadrants, tier 1 is the strongest example of that trait; in Developmental,
+   tier 1 is closest to average on both (most truly even), and higher tiers drift further below
+   average, meaning they're first in line for a foundational block. Players missing any of the
+   underlying tests are left out of the grouping entirely (rather than guessed at) and listed
+   separately under "Needs testing". Recomputes fresh every time new data is loaded. */
+function curWeightForGroups(p){
+  const ws = (p.weights || []).filter(w => w != null);
+  if (ws.length) return ws[ws.length - 1];
+  return p.startWeight != null ? p.startWeight : null;
+}
+function metricCur(p, label){ const m = p.metrics && p.metrics[label]; return m ? m.current : null; }
+function metricBestVal(p, label){ const m = p.metrics && p.metrics[label]; return m ? m.best : null; }
+function teamZScores(values){
+  const nums = Object.values(values).filter(v => v != null);
+  if (nums.length < 2) { const out = {}; for (const n in values) out[n] = null; return out; }
+  const mean = nums.reduce((a,b)=>a+b,0) / nums.length;
+  const sd = Math.sqrt(nums.reduce((a,b)=>a+(b-mean)*(b-mean),0) / nums.length);
+  const out = {};
+  for (const n in values){ const v = values[n]; out[n] = (v==null || sd===0) ? null : (v-mean)/sd; }
+  return out;
+}
+function renderTrainingGroups(){
+  const container = document.getElementById('groupsContent');
+  if (!container) return;
+
+  const rows = {};
+  order.forEach(name=>{
+    const p = players[name];
+    const bw = curWeightForGroups(p);
+    const trapdl = metricCur(p, 'TBDL 1RM (.4m/s)'), bench = metricCur(p, 'Bench 1RM');
+    rows[name] = {
+      pos: p.pos,
+      trapdlRel: (trapdl!=null && bw) ? trapdl/bw : null,
+      benchRel: (bench!=null && bw) ? bench/bw : null,
+      chinups: metricCur(p, 'Chin Up Max Reps'),
+      cmj: metricCur(p, 'CMJ'), peakpower: metricCur(p, 'Peak Power'), rsi: metricCur(p, 'RSI'),
+      sprint: metricCur(p, '10 Yard Sprint'), bodyfat: metricCur(p, 'Body Fat'), leanmass: metricCur(p, 'Lean Mass'),
+      trapdlCur: trapdl, trapdlBest: metricBestVal(p, 'TBDL 1RM (.4m/s)'),
+      cmjCur: metricCur(p,'CMJ'), cmjBest: metricBestVal(p, 'CMJ'),
+      peakpowerCur: metricCur(p,'Peak Power'), peakpowerBest: metricBestVal(p, 'Peak Power'),
+    };
+  });
+  const pick = field => Object.fromEntries(order.map(n=>[n, rows[n][field]]));
+  const zTrapdl = teamZScores(pick('trapdlRel')), zBench = teamZScores(pick('benchRel')), zChinups = teamZScores(pick('chinups'));
+  const zCmj = teamZScores(pick('cmj')), zPeakpower = teamZScores(pick('peakpower'));
+  const zRsi = teamZScores(pick('rsi'));
+  const zSprintRaw = teamZScores(pick('sprint'));
+  const zSprint = {}; order.forEach(n=>{ zSprint[n] = zSprintRaw[n]==null ? null : -zSprintRaw[n]; }); // lower time = better
+  const zBodyfat = teamZScores(pick('bodyfat')), zLeanmass = teamZScores(pick('leanmass'));
+  const composite = (...zs) => { const vals = zs.filter(z=>z!=null); return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null; };
+
+  const results = [], needsTesting = [];
+  order.forEach(name=>{
+    const strengthZ = composite(zTrapdl[name], zBench[name], zChinups[name]);
+    const powerZ = composite(zCmj[name], zPeakpower[name]);
+    const missing = [];
+    if (rows[name].trapdlRel==null) missing.push('Trap DL');
+    if (rows[name].benchRel==null) missing.push('Bench');
+    if (rows[name].cmj==null) missing.push('CMJ');
+    if (rows[name].peakpower==null) missing.push('Peak Power');
+    if (rows[name].rsi==null) missing.push('RSI');
+    if (strengthZ==null || powerZ==null){ needsTesting.push({name, pos: rows[name].pos, missing}); return; }
+
+    let bucket;
+    if (strengthZ>=0 && powerZ>=0) bucket = 'Strong & Powerful';
+    else if (strengthZ>=0 && powerZ<0) bucket = 'Strong, Not Powerful';
+    else if (strengthZ<0 && powerZ>=0) bucket = 'Powerful, Not Strong';
+    else bucket = 'Developmental';
+
+    const flags = [];
+    const rsiZ = zRsi[name], sprintZ = zSprint[name];
+    if (rsiZ!=null && rsiZ<=-0.5 && (powerZ-rsiZ)>=0.4) flags.push('Reactive strength (RSI) lagging vs. overall power');
+    if (sprintZ!=null && (powerZ-sprintZ)>=0.75) flags.push('Sprint speed lagging vs. power — mechanics check');
+    if (zBodyfat[name]!=null && zBodyfat[name]>=0.75) flags.push('Body comp: higher team-relative body fat');
+    if (zLeanmass[name]!=null && zLeanmass[name]<=-0.75) flags.push('Body comp: lower team-relative lean mass');
+    [['Trap DL', rows[name].trapdlCur, rows[name].trapdlBest],
+     ['CMJ', rows[name].cmjCur, rows[name].cmjBest],
+     ['Peak Power', rows[name].peakpowerCur, rows[name].peakpowerBest]].forEach(([label,cur,best])=>{
+      if (cur!=null && best!=null && best!==0 && cur < best*0.95) flags.push(label+' down '+Math.round((1-cur/best)*100)+'% from personal best');
+    });
+
+    results.push({name, pos: rows[name].pos, strengthZ, powerZ, mag: Math.sqrt(strengthZ*strengthZ+powerZ*powerZ), bucket, flags});
+  });
+
+  const bucketOrder = ['Strong & Powerful','Powerful, Not Strong','Strong, Not Powerful','Developmental'];
+  const colors = {'Strong & Powerful':'#3ecf6e','Powerful, Not Strong':'#9b8cf2','Strong, Not Powerful':'#e8b73d','Developmental':'#ff8a65'};
+  const grouped = {}; bucketOrder.forEach(b=>grouped[b]=[]);
+  results.forEach(r=>grouped[r.bucket].push(r));
+  bucketOrder.forEach(b=>{
+    const ascending = (b==='Developmental'); // closest-to-average first; furthest-below-average (highest priority) last
+    grouped[b].sort((a,bb) => ascending ? a.mag-bb.mag : bb.mag-a.mag);
+    grouped[b].forEach((r,i)=>{ r.tier = i+1; });
+  });
+
+  const w=620, h=440, cx0=w/2, cy0=h/2, padA=42, range=2.2;
+  const xFor = z => cx0 + (z/range)*(w/2-padA);
+  const yFor = z => cy0 - (z/range)*(h/2-padA);
+  const quadFill = {tr:'rgba(62,207,110,0.10)', tl:'rgba(155,140,242,0.10)', br:'rgba(232,183,61,0.10)', bl:'rgba(255,138,101,0.10)'};
+  let svg = '';
+  svg += `<rect x="${padA}" y="${padA}" width="${cx0-padA}" height="${cy0-padA}" fill="${quadFill.tl}"/>`;
+  svg += `<rect x="${cx0}" y="${padA}" width="${w-padA-cx0}" height="${cy0-padA}" fill="${quadFill.tr}"/>`;
+  svg += `<rect x="${padA}" y="${cy0}" width="${cx0-padA}" height="${h-padA-cy0}" fill="${quadFill.bl}"/>`;
+  svg += `<rect x="${cx0}" y="${cy0}" width="${w-padA-cx0}" height="${h-padA-cy0}" fill="${quadFill.br}"/>`;
+  svg += `<line x1="${cx0}" y1="${padA}" x2="${cx0}" y2="${h-padA}" stroke="#2c2e33" stroke-width="1.5"/>`;
+  svg += `<line x1="${padA}" y1="${cy0}" x2="${w-padA}" y2="${cy0}" stroke="#2c2e33" stroke-width="1.5"/>`;
+  svg += `<text x="${w-padA-6}" y="${padA+16}" fill="${colors['Strong & Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong &amp; Powerful</text>`;
+  svg += `<text x="${padA+6}" y="${padA+16}" fill="${colors['Powerful, Not Strong']}" font-size="12" font-weight="700" text-anchor="start">Powerful, Not Strong</text>`;
+  svg += `<text x="${w-padA-6}" y="${h-padA-8}" fill="${colors['Strong, Not Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong, Not Powerful</text>`;
+  svg += `<text x="${padA+6}" y="${h-padA-8}" fill="${colors['Developmental']}" font-size="12" font-weight="700" text-anchor="start">Developmental</text>`;
+  svg += `<text x="${w/2}" y="${h-8}" fill="#93969d" font-size="11" text-anchor="middle">Relative strength (z-score)</text>`;
+  svg += `<text x="14" y="${h/2}" fill="#93969d" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${h/2})">Power (z-score)</text>`;
+  results.forEach(r=>{
+    const x=xFor(r.strengthZ), y=yFor(r.powerZ);
+    const tip = (`${r.name} (${r.pos}) — ${r.bucket}, tier ${r.tier} — strength ${r.strengthZ.toFixed(2)}, power ${r.powerZ.toFixed(2)}`).replace(/"/g,'&quot;');
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${colors[r.bucket]}"/>`;
+    svg += `<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" fill="#f2f1ee" font-size="10" text-anchor="middle">${r.name.split(',')[0]}</text>`;
+    svg += `<circle class="pt-hit" data-tip="${tip}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="transparent"/>`;
+  });
+  const svgHtml = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
+
+  let listsHtml = '<div class="quad-grid">';
+  bucketOrder.forEach(b=>{
+    listsHtml += `<div class="quad-col"><div class="quad-col-head" style="color:${colors[b]}">${b}</div>`;
+    if (!grouped[b].length){
+      listsHtml += `<div class="quad-empty">No one here right now</div>`;
+    } else {
+      grouped[b].forEach(r=>{
+        listsHtml += `<div class="quad-item"><span class="quad-tier">#${r.tier}</span><span class="quad-name">${r.name}</span><span class="quad-pos">${r.pos}</span>`;
+        if (r.flags.length) listsHtml += `<div class="quad-flags">${r.flags.map(f=>`<div class="quad-flag">${f}</div>`).join('')}</div>`;
+        listsHtml += `</div>`;
+      });
+    }
+    listsHtml += `</div>`;
+  });
+  listsHtml += '</div>';
+
+  let needsHtml = '';
+  if (needsTesting.length){
+    needsHtml = `<div class="panel" style="margin-top:16px;"><h3>Needs testing before grouping</h3>` +
+      needsTesting.map(r=>`<div class="quad-item"><span class="quad-name">${r.name}</span><span class="quad-pos">${r.pos}</span><div class="quad-flags"><div class="quad-flag">Missing: ${r.missing.join(', ')}</div></div></div>`).join('') +
+      `</div>`;
+  }
+
+  container.innerHTML = `<div class="panel"><h3>Strength &times; Power Quadrant</h3><div class="chart-wrap">${svgHtml}</div></div>${listsHtml}${needsHtml}`;
+}
+
 /* ---------- shared chart hover tooltip ----------
    Charts (weight trend, metric trend, character-eval radar) are re-rendered via innerHTML, which
    destroys and recreates their <circle> elements each time. Rather than re-attaching listeners on
@@ -1450,6 +1618,7 @@ function refreshAllViews(){
   renderTeamTab('sections-strength','kpiStrength','STRENGTH');
   renderTeamTab('sections-fitness','kpiFitness','FITNESS');
   renderCharacter();
+  renderTrainingGroups();
   renderGrid();
   showRoster();
   updateDataMeta();
@@ -1772,6 +1941,7 @@ function initDashboard(){
   renderTeamTab('sections-strength','kpiStrength','STRENGTH');
   renderTeamTab('sections-fitness','kpiFitness','FITNESS');
   renderCharacter();
+  renderTrainingGroups();
   renderGrid();
   updateDataMeta();
 }
