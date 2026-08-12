@@ -1264,7 +1264,7 @@ function renderTrainingGroups(){
   svg += `<text x="${padA+6}" y="${padA+16}" fill="${colors['Powerful, Not Strong']}" font-size="12" font-weight="700" text-anchor="start">Powerful, Not Strong</text>`;
   svg += `<text x="${w-padA-6}" y="${h-padA-8}" fill="${colors['Strong, Not Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong, Not Powerful</text>`;
   svg += `<text x="${padA+6}" y="${h-padA-8}" fill="${colors['Developmental']}" font-size="12" font-weight="700" text-anchor="start">Developmental</text>`;
-  const strengthAxisLabel = mode==='absolute' ? 'Absolute strength — Trap DL + Bench, lb (z-score)' : 'Relative strength — scaled to bodyweight (z-score)';
+  const strengthAxisLabel = mode==='absolute' ? 'Absolute strength (z-score)' : 'Relative strength — scaled to bodyweight (z-score)';
   svg += `<text x="${w/2}" y="${h-8}" fill="#93969d" font-size="11" text-anchor="middle">${strengthAxisLabel}</text>`;
   svg += `<text x="14" y="${h/2}" fill="#93969d" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${h/2})">Power (z-score)</text>`;
   results.forEach(r=>{
@@ -1300,8 +1300,8 @@ function renderTrainingGroups(){
   }
 
   const toggleHtml = `<div class="quad-toggle">
-    <button class="quad-toggle-btn${mode==='relative'?' active':''}" onclick="setTrainingGroupsMode('relative')">Relative (scaled to bodyweight)</button>
-    <button class="quad-toggle-btn${mode==='absolute'?' active':''}" onclick="setTrainingGroupsMode('absolute')">Absolute (raw lb)</button>
+    <button class="quad-toggle-btn${mode==='relative'?' active':''}" onclick="setTrainingGroupsMode('relative')">Relative Strength (scaled for BW)</button>
+    <button class="quad-toggle-btn${mode==='absolute'?' active':''}" onclick="setTrainingGroupsMode('absolute')">Absolute Strength (total LBs)</button>
   </div>`;
 
   container.innerHTML = `<div class="panel"><h3>Strength &times; Power Quadrant</h3>${toggleHtml}<div class="chart-wrap">${svgHtml}</div></div>${listsHtml}${needsHtml}`;
