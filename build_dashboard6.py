@@ -67,7 +67,7 @@ HTML = r"""<!DOCTYPE html>
   .kpi-card .value { font-size:24px; font-weight:800; margin-top:4px; line-height:1.1; }
   .kpi-card .caption { font-size:10.5px; color: var(--muted); margin-top:3px; }
   .panels-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px; align-items:start; }
-  @media (max-width: 920px) { .panels-2 { grid-template-columns: 1fr; } }
+  @media screen and (max-width: 920px) { .panels-2 { grid-template-columns: 1fr; } }
   .panel { background: var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
   .panel h3 { margin:0 0 10px; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
   .metric-block { margin-bottom: 18px; }
@@ -206,68 +206,6 @@ HTML = r"""<!DOCTYPE html>
   .print-btn { background: rgba(255,255,255,.1); border:1px solid var(--line); color:var(--text);
     padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; margin-left:auto; }
   .print-btn:hover { background: rgba(255,255,255,.18); }
-  @page { size: letter; margin: 0.35in; }
-  @media print {
-    header, .toolbar, .print-btn, #backBtn, nav.tabs, .modal-overlay { display:none !important; }
-    body { background:#fff; color:#000; font-size:9px; }
-    main { padding:0 !important; max-width:none !important; }
-    .panel, table.data, .card, .kpi-card { background:#fff; border-color:#bbb; box-shadow:none; }
-    body:not(.printing-all) #playerDetail { display:block !important; }
-    /* "Print All Player Sheets" mode: show the pre-built multi-player container instead of
-       whichever single player happened to be on screen, and hide the roster grid / single
-       player view so nothing duplicates or leaks into the printout. */
-    body.printing-all #playerDetail, body.printing-all #playersRoster { display:none !important; }
-    body.printing-all #printAllContent { display:block !important; }
-
-    /* ---- Header / bio: compact single row ---- */
-    .detail-header { margin-bottom:6px; gap:10px; align-items:center; }
-    .detail-avatar { width:52px; height:52px; font-size:17px; }
-    .detail-title h2 { font-size:16px; margin:0 0 2px; }
-    .pos-pill { font-size:8.5px; padding:1px 7px; }
-    .bio-row { gap:10px; margin-top:4px; }
-    .bio-item .label { font-size:7.5px; }
-    .bio-item .value { font-size:11px; }
-    .print-logo { height:32px; }
-
-    /* ---- Progress Photos: shrink + tighten so all 4 line up neatly ---- */
-    .photo-grid4 { gap:14px; margin-bottom:2px; }
-    .pg-cell { width:auto; }
-    .pg-cell img, .pg-placeholder { width:62px; height:83px; }
-    .pg-placeholder { font-size:6px; padding:4px; }
-    .pg-header { font-size:8px; margin-bottom:3px; }
-    .pg-tag { font-size:6.5px; margin-bottom:2px; }
-    .pg-date { font-size:6.5px; margin-top:3px; }
-    .photo-note { display:none; }
-    #photoContent { page-break-inside: avoid; }
-
-    /* ---- Character Eval + Weight Trend chart panels: side by side, shrunk charts ---- */
-    .panels-2 { gap:8px; margin-bottom:6px; page-break-inside: avoid; }
-    .panels-2 .panel { padding:7px 9px; }
-    .panels-2 .panel h3 { font-size:9.5px; margin:0 0 3px; }
-    .panels-2 .chart-wrap { max-width:230px; margin:0 auto; }
-    .trait-defs { font-size:6.5px; margin-top:5px !important; line-height:1.35; }
-
-    /* ---- All 12 test metrics: dense 4-across grid, small charts ---- */
-    .metric-head { margin: 6px 0 3px; }
-    .metric-head h2 { font-size:10px; }
-    /* Start STRENGTH cleanly on its own page rather than letting the heading get orphaned
-       at the bottom of the SPEED/BOUNCE page with its grid stranded below the break. */
-    .metric-head[data-cat="STRENGTH"] { page-break-before: always; break-before: page; margin-top:0; }
-    .metric-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:6px; }
-    .metric-grid .panel { padding:5px 6px; page-break-inside: avoid; }
-    .metric-grid .panel h3 { font-size:8px; margin:0 0 2px; }
-    .info-dot { display:none; } /* tooltips are meaningless on paper */
-    .metric-desc-sm { display:none; } /* keeps the print sheet within its 1-2 page budget */
-    .metric-grid .metric-hero { margin-bottom:0; gap:3px; }
-    .metric-grid .metric-hero .hero-value { font-size:15px; }
-    .metric-grid .metric-hero .hero-unit { font-size:6.5px; }
-    .metric-grid .metric-hero .hero-badge { font-size:6.5px; padding:1px 5px; }
-    .metric-grid .stat-line { gap:7px; margin-bottom:2px; }
-    .metric-grid .stat-line .si { font-size:6.5px; }
-    .metric-grid .stat-line .si b { font-size:7.5px; }
-    .metric-grid .pb-badge { font-size:6px; padding:0 4px; }
-    .metric-grid .chart-wrap { max-width:100%; }
-  }
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
     align-items:center; justify-content:center; padding:20px; }
   .modal-overlay.open { display:flex; }
@@ -330,6 +268,85 @@ HTML = r"""<!DOCTYPE html>
     padding:10px 12px; border-radius:8px; cursor:pointer; font-size:13.5px; font-weight:700; }
   .lock-box button:hover { background:#8c1526; }
   .lock-error { color:var(--bad); font-size:12px; margin-top:10px; min-height:14px; }
+
+  /* This block is intentionally the LAST thing in the stylesheet. Nearly every rule in here
+     re-overrides an earlier base (screen) rule for the same class at equal specificity - e.g.
+     .pg-cell img above is sized 210x280 for on-screen viewing, and .pg-cell img below shrinks
+     it to 62x83 for print. CSS breaks specificity ties by source order, so whichever one is
+     LAST in the file wins, regardless of which @media block it's nested in. Keeping this print
+     block at the very end guarantees it always wins those ties; if it gets moved earlier again
+     (e.g. above the .pg-cell/.photo-grid4/.metric-grid rules), those later base rules silently
+     win instead and print looks like the on-screen dark-theme layout at full size. */
+  @page { size: letter; margin: 0.35in; }
+  @media print {
+    /* Screen theme colors (--text, --muted, --neutral) are light-on-dark and unreadable on
+       white paper. Repoint them to dark, high-contrast equivalents for print only - every rule
+       and chart label that already references var(--text)/var(--muted)/var(--neutral) picks
+       this up automatically, no per-element overrides needed. */
+    :root { --text:#141517; --muted:#54565c; --neutral:#57595f; }
+    header, .toolbar, .print-btn, #backBtn, nav.tabs, .modal-overlay { display:none !important; }
+    body { background:#fff; color:#000; font-size:9px; }
+    main { padding:0 !important; max-width:none !important; }
+    .panel, table.data, .card, .kpi-card { background:#fff; border-color:#bbb; box-shadow:none; }
+    body:not(.printing-all) #playerDetail { display:block !important; }
+    /* "Print All Player Sheets" mode: show the pre-built multi-player container instead of
+       whichever single player happened to be on screen, and hide the roster grid / single
+       player view so nothing duplicates or leaks into the printout. */
+    body.printing-all #playerDetail, body.printing-all #playersRoster { display:none !important; }
+    body.printing-all #printAllContent { display:block !important; }
+
+    /* ---- Header / bio: compact single row ---- */
+    .detail-header { margin-bottom:6px; gap:10px; align-items:center; }
+    .detail-avatar { width:52px; height:52px; font-size:17px; }
+    .detail-title h2 { font-size:16px; margin:0 0 2px; }
+    .pos-pill { font-size:8.5px; padding:1px 7px; }
+    .bio-row { gap:10px; margin-top:4px; }
+    .bio-item .label { font-size:7.5px; }
+    .bio-item .value { font-size:11px; }
+    .print-logo { height:32px; }
+
+    /* ---- Progress Photos: shrink + tighten so all 4 line up neatly ---- */
+    .photo-grid4 { gap:18px; margin-bottom:4px; }
+    .pg-cell { width:auto; }
+    .pg-cell img, .pg-placeholder { width:132px; height:176px; }
+    .pg-placeholder { font-size:8px; padding:6px; }
+    .pg-header { font-size:9.5px; margin-bottom:4px; }
+    .pg-tag { font-size:8px; margin-bottom:3px; }
+    .pg-date { font-size:8px; margin-top:4px; }
+    .photo-note { display:none; }
+    #photoContent { page-break-inside: avoid; }
+
+    /* ---- Character Eval + Weight Trend chart panels: side by side, shrunk charts ---- */
+    .panels-2 { gap:8px; margin-bottom:6px; page-break-inside: avoid; }
+    .panels-2 .panel { padding:7px 9px; }
+    .panels-2 .panel h3 { font-size:9.5px; margin:0 0 3px; }
+    .panels-2 .chart-wrap { max-width:230px; margin:0 auto; }
+    .trait-defs { font-size:6.5px; margin-top:5px !important; line-height:1.35; }
+
+    /* ---- All 12 test metrics: dense grid, small charts ---- */
+    /* Keep a category heading glued to the grid that follows it. Without this a
+       heading can strand at the bottom of a page with its charts orphaned onto
+       the next one (BOUNCE did exactly that). */
+    .metric-head { margin: 6px 0 3px; page-break-after: avoid; break-after: avoid; }
+    .metric-head h2 { font-size:10px; }
+    /* Every category (SPEED/BOUNCE/STRENGTH/FITNESS) always has exactly 3 metrics - a fixed
+       3-column grid fills the full page width. (The hard-coded 4th column here used to leave a
+       dead empty column and push every row over into the left three-quarters of the page.) */
+    .metric-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:6px; }
+    .metric-grid .panel { padding:5px 6px; page-break-inside: avoid; }
+    .metric-grid .panel h3 { font-size:8px; margin:0 0 2px; }
+    .info-dot { display:none; } /* tooltips are meaningless on paper */
+    .metric-desc-sm { display:none; } /* keeps the print sheet within its 1-2 page budget */
+    .metric-grid .metric-hero { margin-bottom:0; gap:3px; }
+    .metric-grid .metric-hero .hero-value { font-size:15px; }
+    .metric-grid .metric-hero .hero-unit { font-size:6.5px; }
+    .metric-grid .metric-hero .hero-badge { font-size:6.5px; padding:1px 5px; }
+    .metric-grid .stat-line { gap:7px; margin-bottom:2px; }
+    .metric-grid .stat-line .si { font-size:6.5px; }
+    .metric-grid .stat-line .si b { font-size:7.5px; }
+    .metric-grid .pb-badge { font-size:6px; padding:0 4px; }
+    .metric-grid .chart-wrap { max-width:100%; }
+  }
 </style>
 </head>
 <body>
@@ -1039,13 +1056,13 @@ function renderRadarChart(containerId, labels, values, avgValues, maxValue){
     axisLines+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2c2e33" stroke-width="1"/>`;
     const [lx,ly]=pointAt(i,maxValue*1.3);
     const anchor = Math.abs(lx-cx)<8 ? 'middle' : (lx>cx?'start':'end');
-    labelEls+=`<text x="${lx}" y="${ly}" fill="#f2f1ee" font-size="12.5" text-anchor="${anchor}" dominant-baseline="middle">${lab}</text>`;
+    labelEls+=`<text x="${lx}" y="${ly}" fill="var(--text)" font-size="12.5" text-anchor="${anchor}" dominant-baseline="middle">${lab}</text>`;
   });
   const radarNum = v => v==null ? '—' : (Number.isInteger(v) ? String(v) : v.toFixed(1));
   const avgPts = (avgValues||[]).map((v,i)=>pointAt(i, v).join(',')).join(' ');
   const avgPoints = (avgValues||[]).map((v,i)=>{ const [x,y]=pointAt(i, v);
     const tip = `${labels[i]} (Team Avg): ${radarNum(v)}`;
-    return `<circle cx="${x}" cy="${y}" r="3" fill="#93969d"/><circle class="pt-hit" data-tip="${tip.replace(/"/g,'&quot;')}" cx="${x}" cy="${y}" r="9" fill="transparent"/>`; }).join('');
+    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--muted)"/><circle class="pt-hit" data-tip="${tip.replace(/"/g,'&quot;')}" cx="${x}" cy="${y}" r="9" fill="transparent"/>`; }).join('');
   const dataPts = values.map((v,i)=>pointAt(i, v).join(',')).join(' ');
   const dataPoints = values.map((v,i)=>{ const [x,y]=pointAt(i, v);
     const tip = `${labels[i]}: ${radarNum(v)}`;
@@ -1053,12 +1070,12 @@ function renderRadarChart(containerId, labels, values, avgValues, maxValue){
   const legendY = h - 14;
   const legend = avgValues ? `
     <line x1="${cx-115}" y1="${legendY}" x2="${cx-95}" y2="${legendY}" stroke="${RED}" stroke-width="2.5"/>
-    <text x="${cx-90}" y="${legendY+4}" fill="#f2f1ee" font-size="11.5">This Player</text>
-    <line x1="${cx+5}" y1="${legendY}" x2="${cx+25}" y2="${legendY}" stroke="#93969d" stroke-width="2.5" stroke-dasharray="4,3"/>
-    <text x="${cx+30}" y="${legendY+4}" fill="#93969d" font-size="11.5">Team Average</text>` : '';
+    <text x="${cx-90}" y="${legendY+4}" fill="var(--text)" font-size="11.5">This Player</text>
+    <line x1="${cx+5}" y1="${legendY}" x2="${cx+25}" y2="${legendY}" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="4,3"/>
+    <text x="${cx+30}" y="${legendY+4}" fill="var(--muted)" font-size="11.5">Team Average</text>` : '';
   document.getElementById(containerId).innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
     ${gridRings}${axisLines}
-    ${avgValues ? `<polygon points="${avgPts}" fill="rgba(147,150,157,0.12)" stroke="#93969d" stroke-width="2" stroke-dasharray="5,4"/>` : ''}
+    ${avgValues ? `<polygon points="${avgPts}" fill="rgba(147,150,157,0.12)" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5,4"/>` : ''}
     <polygon points="${dataPts}" fill="rgba(166,25,46,0.35)" stroke="${RED}" stroke-width="2.5"/>
     ${avgPoints}${dataPoints}${labelEls}${legend}</svg>`;
 }
@@ -1097,13 +1114,13 @@ function renderLineChart(containerId, labels, values, unit, compact){
   const fsAxis = compact ? 8 : 10, fsXLab = compact ? 8 : 10, fsDot = compact ? 2.2 : 3.2, fsStroke = compact ? 1.8 : 2.5;
   const nums = values.filter(v=>v!=null);
   if (nums.length === 0){
-    document.getElementById(containerId).innerHTML = `<svg viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" fill="#93969d" font-size="${compact?10:12}" text-anchor="middle">No test data yet</text></svg>`;
+    document.getElementById(containerId).innerHTML = `<svg viewBox="0 0 ${w} ${h}"><text x="${w/2}" y="${h/2}" fill="var(--muted)" font-size="${compact?10:12}" text-anchor="middle">No test data yet</text></svg>`;
     return;
   }
   if (nums.length === 1){
     document.getElementById(containerId).innerHTML = `<svg viewBox="0 0 ${w} ${h}"><circle cx="${w/2}" cy="${h/2}" r="${compact?3:4}" fill="${RED}"/>
-      <text x="${w/2}" y="${h/2-(compact?12:18)}" fill="#f2f1ee" font-size="${compact?11:13}" text-anchor="middle">${fmtNum(nums[0], unit)}</text>
-      <text x="${w/2}" y="${h/2+(compact?18:26)}" fill="#93969d" font-size="${compact?9:11}" text-anchor="middle">${compact?'1 test recorded':'only one test recorded so far'}</text></svg>`;
+      <text x="${w/2}" y="${h/2-(compact?12:18)}" fill="var(--text)" font-size="${compact?11:13}" text-anchor="middle">${fmtNum(nums[0], unit)}</text>
+      <text x="${w/2}" y="${h/2+(compact?18:26)}" fill="var(--muted)" font-size="${compact?9:11}" text-anchor="middle">${compact?'1 test recorded':'only one test recorded so far'}</text></svg>`;
     return;
   }
   let minV=Math.min(...nums), maxV=Math.max(...nums);
@@ -1114,8 +1131,8 @@ function renderLineChart(containerId, labels, values, unit, compact){
   let gridLines='';
   for (let s=0;s<=gridSteps;s++){ const v=minV+(maxV-minV)*s/gridSteps; const y=yFor(v);
     gridLines += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#1f2023" stroke-width="1"/>`;
-    if (!compact || s%2===0) gridLines += `<text x="${padL-6}" y="${y+3}" fill="#93969d" font-size="${fsAxis}" text-anchor="end">${axisNum(v,unit)}</text>`; }
-  let xLabels=''; labels.forEach((lab,i)=>{ if (compact && labels.length>4 && i%2!==0 && i!==labels.length-1) return; xLabels += `<text x="${xFor(i)}" y="${h-(compact?6:10)}" fill="#93969d" font-size="${fsXLab}" text-anchor="middle">${lab}</text>`; });
+    if (!compact || s%2===0) gridLines += `<text x="${padL-6}" y="${y+3}" fill="var(--muted)" font-size="${fsAxis}" text-anchor="end">${axisNum(v,unit)}</text>`; }
+  let xLabels=''; labels.forEach((lab,i)=>{ if (compact && labels.length>4 && i%2!==0 && i!==labels.length-1) return; xLabels += `<text x="${xFor(i)}" y="${h-(compact?6:10)}" fill="var(--muted)" font-size="${fsXLab}" text-anchor="middle">${lab}</text>`; });
   // Skip missed tests (null values) entirely rather than breaking the line into disconnected
   // segments — connect straight from the last real reading to the next one, so a missed test
   // doesn't leave a visual gap in the trend line.
@@ -1248,13 +1265,13 @@ function renderTrainingGroups(){
   svg += `<text x="${padA+6}" y="${padA+16}" fill="${colors['Powerful, Not Strong']}" font-size="12" font-weight="700" text-anchor="start">Powerful, Not Strong</text>`;
   svg += `<text x="${w-padA-6}" y="${h-padA-8}" fill="${colors['Strong, Not Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong, Not Powerful</text>`;
   svg += `<text x="${padA+6}" y="${h-padA-8}" fill="${colors['Developmental']}" font-size="12" font-weight="700" text-anchor="start">Developmental</text>`;
-  svg += `<text x="${w/2}" y="${h-8}" fill="#93969d" font-size="11" text-anchor="middle">Relative strength (z-score)</text>`;
-  svg += `<text x="14" y="${h/2}" fill="#93969d" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${h/2})">Power (z-score)</text>`;
+  svg += `<text x="${w/2}" y="${h-8}" fill="var(--muted)" font-size="11" text-anchor="middle">Relative strength (z-score)</text>`;
+  svg += `<text x="14" y="${h/2}" fill="var(--muted)" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${h/2})">Power (z-score)</text>`;
   results.forEach(r=>{
     const x=xFor(r.strengthZ), y=yFor(r.powerZ);
     const tip = (`${r.name} (${r.pos}) — ${r.bucket}, tier ${r.tier} — strength ${r.strengthZ.toFixed(2)}, power ${r.powerZ.toFixed(2)}`).replace(/"/g,'&quot;');
     svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${colors[r.bucket]}"/>`;
-    svg += `<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" fill="#f2f1ee" font-size="10" text-anchor="middle">${r.name.split(',')[0]}</text>`;
+    svg += `<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" fill="var(--text)" font-size="10" text-anchor="middle">${r.name.split(',')[0]}</text>`;
     svg += `<circle class="pt-hit" data-tip="${tip}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="transparent"/>`;
   });
   const svgHtml = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
