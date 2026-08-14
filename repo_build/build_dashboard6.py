@@ -112,19 +112,23 @@ HTML = r"""<!DOCTYPE html>
   .bar-fill.tier-red { background: var(--tier-red); box-shadow: 0 0 6px 0 rgba(229,72,77,0.85); }
   .bar-fill.tier-gray { background: var(--tier-gray); box-shadow: 0 0 4px 0 rgba(85,87,92,0.7); }
   .bar-val { width:60px; flex-shrink:0; font-size:11.5px; font-variant-numeric: tabular-nums; font-weight:700; }
-  .quad-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:16px; }
-  .quad-col { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
-  .quad-col-head { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; margin-bottom:10px; }
-  .quad-item { padding:8px 0; border-top:1px solid var(--line); }
+  .quad-panel { padding:12px 14px; }
+  .quad-chart-wrap { max-width:520px; margin:0 auto 2px; border-radius:10px; overflow:hidden; }
+  .quad-chart-wrap svg { width:100%; height:auto; display:block; }
+  .quad-chart-wrap svg circle.pt-hit { cursor:pointer; }
+  .quad-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin-top:10px; }
+  .quad-col { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px 12px; }
+  .quad-col-head { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; margin-bottom:7px; }
+  .quad-item { padding:6px 0; border-top:1px solid var(--line); }
   .quad-item:first-of-type { border-top:none; }
-  .quad-tier { display:inline-block; min-width:22px; font-size:11px; font-weight:700; color:var(--muted); margin-right:2px; }
-  .quad-name { font-size:13.5px; font-weight:600; }
-  .quad-pos { font-size:11px; color:var(--muted); margin-left:6px; }
-  .quad-flags { margin-top:4px; }
-  .quad-flag { font-size:11.5px; color:var(--muted); padding-left:24px; line-height:1.5; }
-  .quad-empty { font-size:12.5px; color:var(--muted); font-style:italic; }
-  .quad-toggle { display:flex; gap:0; margin:4px 0 14px; width:fit-content; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .quad-toggle-btn { background:var(--panel2); color:var(--muted); border:none; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .quad-tier { display:inline-block; min-width:20px; font-size:10.5px; font-weight:700; color:var(--muted); margin-right:2px; }
+  .quad-name { font-size:13px; font-weight:600; }
+  .quad-pos { font-size:10.5px; color:var(--muted); margin-left:6px; }
+  .quad-flags { margin-top:3px; }
+  .quad-flag { font-size:11px; color:var(--muted); padding-left:22px; line-height:1.4; }
+  .quad-empty { font-size:12px; color:var(--muted); font-style:italic; }
+  .quad-toggle { display:flex; gap:0; margin:2px 0 10px; width:fit-content; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .quad-toggle-btn { background:var(--panel2); color:var(--muted); border:none; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
   .quad-toggle-btn:not(:first-child) { border-left:1px solid var(--line); }
   .quad-toggle-btn.active { background:var(--red); color:#fff; }
   .quad-toggle-btn:hover:not(.active) { color:var(--text); }
@@ -1250,7 +1254,7 @@ function renderTrainingGroups(){
     grouped[b].forEach((r,i)=>{ r.tier = i+1; });
   });
 
-  const w=620, h=440, cx0=w/2, cy0=h/2, padA=42, range=2.2;
+  const w=480, h=340, cx0=w/2, cy0=h/2, padA=34, range=2.2;
   const xFor = z => cx0 + (z/range)*(w/2-padA);
   const yFor = z => cy0 - (z/range)*(h/2-padA);
   const quadFill = {tr:'rgba(62,207,110,0.10)', tl:'rgba(155,140,242,0.10)', br:'rgba(232,183,61,0.10)', bl:'rgba(255,138,101,0.10)'};
@@ -1261,19 +1265,19 @@ function renderTrainingGroups(){
   svg += `<rect x="${cx0}" y="${cy0}" width="${w-padA-cx0}" height="${h-padA-cy0}" fill="${quadFill.br}"/>`;
   svg += `<line x1="${cx0}" y1="${padA}" x2="${cx0}" y2="${h-padA}" stroke="#2c2e33" stroke-width="1.5"/>`;
   svg += `<line x1="${padA}" y1="${cy0}" x2="${w-padA}" y2="${cy0}" stroke="#2c2e33" stroke-width="1.5"/>`;
-  svg += `<text x="${w-padA-6}" y="${padA+16}" fill="${colors['Strong & Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong &amp; Powerful</text>`;
-  svg += `<text x="${padA+6}" y="${padA+16}" fill="${colors['Powerful, Not Strong']}" font-size="12" font-weight="700" text-anchor="start">Powerful, Not Strong</text>`;
-  svg += `<text x="${w-padA-6}" y="${h-padA-8}" fill="${colors['Strong, Not Powerful']}" font-size="12" font-weight="700" text-anchor="end">Strong, Not Powerful</text>`;
-  svg += `<text x="${padA+6}" y="${h-padA-8}" fill="${colors['Developmental']}" font-size="12" font-weight="700" text-anchor="start">Developmental</text>`;
+  svg += `<text x="${w-padA-5}" y="${padA+14}" fill="${colors['Strong & Powerful']}" font-size="10.5" font-weight="700" text-anchor="end">Strong &amp; Powerful</text>`;
+  svg += `<text x="${padA+5}" y="${padA+14}" fill="${colors['Powerful, Not Strong']}" font-size="10.5" font-weight="700" text-anchor="start">Powerful, Not Strong</text>`;
+  svg += `<text x="${w-padA-5}" y="${h-padA-7}" fill="${colors['Strong, Not Powerful']}" font-size="10.5" font-weight="700" text-anchor="end">Strong, Not Powerful</text>`;
+  svg += `<text x="${padA+5}" y="${h-padA-7}" fill="${colors['Developmental']}" font-size="10.5" font-weight="700" text-anchor="start">Developmental</text>`;
   const strengthAxisLabel = mode==='absolute' ? 'Absolute strength (z-score)' : 'Relative strength — scaled to bodyweight (z-score)';
-  svg += `<text x="${w/2}" y="${h-8}" fill="#93969d" font-size="11" text-anchor="middle">${strengthAxisLabel}</text>`;
-  svg += `<text x="14" y="${h/2}" fill="#93969d" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${h/2})">Power (z-score)</text>`;
+  svg += `<text x="${w/2}" y="${h-6}" fill="#93969d" font-size="9.5" text-anchor="middle">${strengthAxisLabel}</text>`;
+  svg += `<text x="12" y="${h/2}" fill="#93969d" font-size="9.5" text-anchor="middle" transform="rotate(-90 12 ${h/2})">Power (z-score)</text>`;
   results.forEach(r=>{
     const x=xFor(r.strengthZ), y=yFor(r.powerZ);
     const tip = (`${r.name} (${r.pos}) — ${r.bucket}, tier ${r.tier} — strength ${r.strengthZ.toFixed(2)}, power ${r.powerZ.toFixed(2)}`).replace(/"/g,'&quot;');
-    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${colors[r.bucket]}"/>`;
-    svg += `<text x="${x.toFixed(1)}" y="${(y-10).toFixed(1)}" fill="#f2f1ee" font-size="10" text-anchor="middle">${r.name.split(',')[0]}</text>`;
-    svg += `<circle class="pt-hit" data-tip="${tip}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11" fill="transparent"/>`;
+    svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${colors[r.bucket]}"/>`;
+    svg += `<text x="${x.toFixed(1)}" y="${(y-8).toFixed(1)}" fill="#f2f1ee" font-size="9" text-anchor="middle">${r.name.split(',')[0]}</text>`;
+    svg += `<circle class="pt-hit" data-tip="${tip}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" fill="transparent"/>`;
   });
   const svgHtml = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${svg}</svg>`;
 
@@ -1305,7 +1309,7 @@ function renderTrainingGroups(){
     <button class="quad-toggle-btn${mode==='absolute'?' active':''}" onclick="setTrainingGroupsMode('absolute')">Absolute Strength (total LBs)</button>
   </div>`;
 
-  container.innerHTML = `<div class="panel"><h3>Strength &times; Power Quadrant</h3>${toggleHtml}<div class="chart-wrap">${svgHtml}</div></div>${listsHtml}${needsHtml}`;
+  container.innerHTML = `<div class="panel quad-panel"><h3>Strength &times; Power Quadrant</h3>${toggleHtml}<div class="quad-chart-wrap">${svgHtml}</div></div>${listsHtml}${needsHtml}`;
 }
 
 /* ---------- shared chart hover tooltip ----------
