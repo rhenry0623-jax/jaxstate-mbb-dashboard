@@ -36,6 +36,9 @@ HTML = r"""<!DOCTYPE html>
     --panel: #17181b; --panel2: #1f2023; --line: #2c2e33;
     --text: #f2f1ee; --muted: #93969d; --good: #3ecf6e; --bad: #e5484d; --neutral: #8a8d94;
     --tier-green: #3ecf6e; --tier-yellow: #e8b73d; --tier-red: #e5484d; --tier-gray: #55575c;
+    /* Chart-only tokens. Kept separate from --line/--panel so the print override below
+       can lighten gridlines for paper without touching panel borders or backgrounds. */
+    --chart-grid: #2c2e33; --chart-surface: #17181b;
   }
   * { box-sizing: border-box; }
   body { margin:0; background: var(--black); color: var(--text);
@@ -198,6 +201,12 @@ HTML = r"""<!DOCTYPE html>
   .stat-line { display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
   .stat-line .si { font-size:11px; color:var(--muted); }
   .stat-line .si b { color: var(--text); font-size:12.5px; font-weight:700; margin-left:4px; }
+  .char-legend { display:flex; gap:14px; justify-content:center; margin-top:6px;
+    font-size:10.5px; color:var(--muted); }
+  .char-legend span { display:inline-flex; align-items:center; gap:5px; }
+  .char-legend i { display:inline-block; }
+  .char-legend .cl-bar { width:14px; height:3px; border-radius:2px; background:var(--red); }
+  .char-legend .cl-tick { width:2px; height:9px; border-radius:1px; background:var(--muted); }
   .trait-defs { display:flex; flex-direction:column; gap:7px; }
   .trait-def { font-size:11.5px; color:var(--muted); line-height:1.5; }
   .trait-def b { color:var(--text); font-weight:700; }
@@ -283,7 +292,8 @@ HTML = r"""<!DOCTYPE html>
        white paper. Repoint them to dark, high-contrast equivalents for print only - every rule
        and chart label that already references var(--text)/var(--muted)/var(--neutral) picks
        this up automatically, no per-element overrides needed. */
-    :root { --text:#141517; --muted:#54565c; --neutral:#57595f; }
+    :root { --text:#141517; --muted:#54565c; --neutral:#57595f;
+            --chart-grid:#e1e0d9; --chart-surface:#ffffff; }
     header, .toolbar, .print-btn, #backBtn, nav.tabs, .modal-overlay { display:none !important; }
     body { background:#fff; color:#000; font-size:9px; }
     main { padding:0 !important; max-width:none !important; }
@@ -321,6 +331,8 @@ HTML = r"""<!DOCTYPE html>
     .panels-2 .panel { padding:7px 9px; }
     .panels-2 .panel h3 { font-size:9.5px; margin:0 0 3px; }
     .panels-2 .chart-wrap { max-width:230px; margin:0 auto; }
+    .char-legend { font-size:6.5px; gap:10px; margin-top:4px; }
+    .char-legend .cl-tick { height:7px; }
     .trait-defs { font-size:6.5px; margin-top:5px !important; line-height:1.35; }
 
     /* ---- All 12 test metrics: dense grid, small charts ---- */
@@ -455,6 +467,7 @@ HTML = r"""<!DOCTYPE html>
       <div class="panel"><h3>Progress Photos</h3><div id="photoContent"></div></div>
       <div class="panels-2">
         <div class="panel"><h3>Character Evaluation (1–5)</h3><div class="chart-wrap" id="charChart"></div>
+          <div class="char-legend"><span><i class="cl-bar"></i>This player</span><span><i class="cl-tick"></i>Team average</span></div>
           <div class="trait-defs" id="traitDefsPlayer" style="margin-top:12px;"></div>
         </div>
         <div class="panel"><h3>Body Weight Trend (lb)</h3><div class="chart-wrap" id="weightChart"></div></div>
@@ -1106,6 +1119,65 @@ function smoothPathD(points){
   return d.trim();
 }
 
+/* Character Evaluation is drawn as a sorted horizontal bar chart rather than a radar.
+   A radar's polygon area grows with the SQUARE of each score and its shape depends on the
+   arbitrary order of the axes, so it exaggerates and can't be read precisely. Sorting the
+   bars strongest-to-weakest makes the development priority the first thing you see, and the
+   team-average tick answers "compared to the room?" without a second chart. */
+function renderCharacterBars(containerId, labels, values, avgValues, maxValue){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const MAX = maxValue || 5;
+  const rows = labels.map((label, i) => ({
+    label,
+    value: (values && values[i] != null) ? values[i] : null,
+    avg:   (avgValues && avgValues[i] != null) ? avgValues[i] : null,
+  }));
+  const rated = rows.filter(r => r.value != null);
+  const w = 260, padL = 78, padR = 24, top = 14, rowH = 30, barH = 11;
+  if (!rated.length){
+    el.innerHTML = `<svg viewBox="0 0 ${w} 90"><text x="${w/2}" y="48" fill="var(--muted)" font-size="11" text-anchor="middle">No character rating yet</text></svg>`;
+    return;
+  }
+  // Strongest first; ties broken by the bigger gap over the team, so the most
+  // clearly-above-average trait leads.
+  rated.sort((a,b) => (b.value - a.value) || ((b.value-(b.avg??0)) - (a.value-(a.avg??0))));
+  const h = top + rated.length*rowH + 20;
+  const x = v => padL + (w - padL - padR) * (v / MAX);
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  let grid = '';
+  for (let v = 1; v <= MAX; v++){
+    grid += `<line x1="${x(v)}" y1="${top-6}" x2="${x(v)}" y2="${top+rated.length*rowH-8}" stroke="var(--chart-grid)" stroke-width="1"/>`;
+    grid += `<text x="${x(v)}" y="${h-8}" fill="var(--muted)" font-size="8" text-anchor="middle">${v}</text>`;
+  }
+  grid += `<line x1="${padL}" y1="${top-6}" x2="${padL}" y2="${top+rated.length*rowH-8}" stroke="var(--chart-grid)" stroke-width="1"/>`;
+
+  let marks = '';
+  rated.forEach((r, i) => {
+    const yb = top + i*rowH + 4, mid = yb + barH/2;
+    const bw = Math.max(x(r.value) - padL, 2);
+    marks += `<text x="${padL-8}" y="${mid}" fill="var(--text)" font-size="9.5" text-anchor="end" dominant-baseline="middle">${esc(r.label)}</text>`;
+    marks += `<rect x="${padL}" y="${yb}" width="${bw.toFixed(1)}" height="${barH}" rx="4" ry="4" fill="${RED}"/>`;
+    // square off the baseline end so only the data end is rounded
+    marks += `<rect x="${padL}" y="${yb}" width="4" height="${barH}" fill="${RED}"/>`;
+    if (r.avg != null){
+      // surface-colored ring keeps the tick legible where it crosses the bar
+      marks += `<line x1="${x(r.avg).toFixed(1)}" y1="${yb-3.5}" x2="${x(r.avg).toFixed(1)}" y2="${yb+barH+3.5}" stroke="var(--chart-surface)" stroke-width="4" stroke-linecap="round"/>`;
+      marks += `<line x1="${x(r.avg).toFixed(1)}" y1="${yb-3}" x2="${x(r.avg).toFixed(1)}" y2="${yb+barH+3}" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>`;
+    }
+    // Park the value clear of BOTH the bar end and the average tick — when the team average
+    // sits above the player's score the tick lands past the bar, and a label pinned to the
+    // bar end would collide with it.
+    const labelX = Math.max(x(r.value), r.avg != null ? x(r.avg) : 0) + 8;
+    marks += `<text x="${labelX.toFixed(1)}" y="${mid}" fill="var(--text)" font-size="10.5" font-weight="700" dominant-baseline="middle">${r.value}</text>`;
+    const gap = r.avg != null ? ` — team avg ${r.avg.toFixed(2)} (${r.value-r.avg>=0?'+':''}${(r.value-r.avg).toFixed(2)})` : '';
+    marks += `<rect class="pt-hit" data-tip="${esc(r.label + ': ' + r.value + ' / ' + MAX + gap)}" x="${padL}" y="${yb-6}" width="${(w-padL-4).toFixed(1)}" height="${barH+12}" fill="transparent"/>`;
+  });
+
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Character evaluation, sorted by score">${grid}${marks}</svg>`;
+}
+
 function renderLineChart(containerId, labels, values, unit, compact){
   const w = compact ? 260 : 500, h = compact ? 118 : 270;
   const padL = compact ? 34 : 48, padR = compact ? 10 : 22, padT = compact ? 12 : 20, padB = compact ? 20 : 34;
@@ -1373,7 +1445,7 @@ function showDetail(name){
   const traits = ['workEthic','consistency','coachability','attitude','toughness'];
   const traitLabels = ['Work Ethic','Consistency','Coachability','Attitude','Toughness'];
   const teamTraitAvg = traits.map(t => avg(order.map(nm=>players[nm].character ? players[nm].character[t] : null)));
-  renderRadarChart('charChart', traitLabels, traits.map(t=>p.character?p.character[t]:0), teamTraitAvg, 5);
+  renderCharacterBars('charChart', traitLabels, traits.map(t=>p.character?p.character[t]:null), teamTraitAvg, 5);
   renderTraitDefs('traitDefsPlayer');
   renderLineChart('weightChart', ['Start', ...p.weightDates], [p.startWeight, ...p.weights], 'lb');
   renderPlayerPhotos(p.name);
