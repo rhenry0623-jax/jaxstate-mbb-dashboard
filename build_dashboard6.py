@@ -1611,6 +1611,7 @@ function cleanNum(v){
   return null;
 }
 function fmtDateCell(d){ return (d instanceof Date) ? (d.getMonth()+1) + '/' + d.getDate() : null; }
+function normPercent(v, unit){ return (v!=null && unit==='%' && Math.abs(v) > 1) ? v/100 : v; }
 function sheetRows(wb, name){
   const ws = wb.Sheets[name];
   if (!ws) return null;
@@ -1681,7 +1682,7 @@ function parseWorkbook(wb){
       const row = rows[r]; if(!row) continue;
       if (row[0] && String(row[0]).toUpperCase().includes('AVERAGE')) avgRow = row;
     }
-    const teamCurrentAvg = (avgRow && lastDateIdx!=null) ? cleanNum(avgRow[lastDateIdx]) : null;
+      const teamCurrentAvg = (avgRow && lastDateIdx!=null) ? normPercent(cleanNum(avgRow[lastDateIdx]), unit) : null;
     teamMetricAvg[label] = teamCurrentAvg;
     newMetricMeta[label] = { category:cat, direction, unit, dates: dateLabels, description };
 
@@ -1690,7 +1691,7 @@ function parseWorkbook(wb){
       const row = rows[r]; if(!row) continue;
       const name = row[0];
       if (!players[name]) continue;
-      const series = dateIdx.map(i => cleanNum(row[i]));
+      const series = dateIdx.map(i => normPercent(cleanNum(row[i]), unit));
       const firstV = series.length ? series[0] : null;
       const currentV = series.length ? series[series.length-1] : null;
       let bestV;
@@ -1698,7 +1699,7 @@ function parseWorkbook(wb){
         const clean = series.filter(v=>v!=null);
         bestV = clean.length ? (direction==='high' ? Math.max(...clean) : Math.min(...clean)) : null;
       } else {
-        bestV = bestIdx!=null ? cleanNum(row[bestIdx]) : null;
+        bestV = bestIdx!=null ? normPercent(cleanNum(row[bestIdx]), unit) : null;
       }
       if (bestV === 0) bestV = null;
       players[name].metrics[label] = { series, first: firstV, current: currentV, best: bestV, teamAvgCurrent: teamCurrentAvg };
