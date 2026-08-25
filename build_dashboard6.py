@@ -1835,6 +1835,7 @@ xhr.send(reqBody);
 status.className = 'upload-status error';
 status.textContent = 'Saved in this browser, but could not reach the publish service: ' + err.message;
 }
+}
 
 function handleWorkbookFile(file){
   const status = document.getElementById('uploadStatus');
