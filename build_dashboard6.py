@@ -1780,36 +1780,60 @@ function bytesToBase64(bytes){
 }
 
 async function publishToEveryone(bytes, filename, password, status){
-  if (!UPDATE_WORKER_URL) {
-    status.className = 'upload-status success';
-    status.textContent = 'Loaded and saved in this browser. (Live publishing is not configured for this copy of the dashboard.)';
-    return;
-  }
-  status.className = 'upload-status pending';
-  status.textContent = 'Saved in this browser. Encoding and publishing for everyone — large files can take a minute or two, please keep this tab open...';
-  try {
-    const fileBase64 = await bytesToBase64(bytes);
-    status.textContent = 'Saved in this browser. Uploading to publish for everyone — large files can take a minute or two, please keep this tab open...';
-    const res = await fetch(UPDATE_WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password, filename: filename, fileBase64: fileBase64 })
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok && body.ok) {
-      status.className = 'upload-status success';
-      status.textContent = 'Saved here, and published for everyone — the live site will refresh within about a minute.';
-    } else if (res.status === 401) {
-      status.className = 'upload-status error';
-      status.textContent = 'Saved in this browser, but publishing failed: incorrect password.';
-    } else {
-      status.className = 'upload-status error';
-      status.textContent = 'Saved in this browser, but publishing failed: ' + (body.error || res.statusText || 'unknown error');
-    }
-  } catch(err){
-    status.className = 'upload-status error';
-    status.textContent = 'Saved in this browser, but could not reach the publish service: ' + err.message;
-  }
+if (!UPDATE_WORKER_URL) {
+status.className = 'upload-status success';
+status.textContent = 'Loaded and saved in this browser. (Live publishing is not configured for this copy of the dashboard.)';
+return;
+}
+status.className = 'upload-status pending';
+status.textContent = 'Saved in this browser. Encoding for publishing — large files can take a minute or two, please keep this tab open and this computer awake...';
+try {
+const fileBase64 = await bytesToBase64(bytes);
+const reqBody = JSON.stringify({ password: password, filename: filename, fileBase64: fileBase64 });
+const bodyMB = (reqBody.length / (1024*1024)).toFixed(1);
+status.textContent = 'Saved in this browser. Uploading to publish for everyone: 0% (0 / ' + bodyMB + ' MB) — keep this tab open and this computer awake...';
+await new Promise((resolve) => {
+const xhr = new XMLHttpRequest();
+xhr.open('POST', UPDATE_WORKER_URL);
+xhr.setRequestHeader('Content-Type', 'application/json');
+xhr.timeout = 10 * 60 * 1000; // large photo-heavy spreadsheets can take a while on slow connections
+xhr.upload.onprogress = (e) => {
+if (e.lengthComputable){
+const pct = Math.round((e.loaded / e.total) * 100);
+const mbSent = (e.loaded / (1024*1024)).toFixed(1);
+status.textContent = 'Saved in this browser. Uploading to publish for everyone: ' + pct + '% (' + mbSent + ' / ' + bodyMB + ' MB) — keep this tab open and this computer awake...';
+}
+};
+xhr.onload = () => {
+let body = {};
+try { body = JSON.parse(xhr.responseText); } catch(e){}
+if (xhr.status >= 200 && xhr.status < 300 && body.ok) {
+status.className = 'upload-status success';
+status.textContent = 'Saved here, and published for everyone — the live site will refresh within about a minute.';
+} else if (xhr.status === 401) {
+status.className = 'upload-status error';
+status.textContent = 'Saved in this browser, but publishing failed: incorrect password.';
+} else {
+status.className = 'upload-status error';
+status.textContent = 'Saved in this browser, but publishing failed: ' + (body.error || xhr.statusText || ('HTTP ' + xhr.status));
+}
+resolve();
+};
+xhr.onerror = () => {
+status.className = 'upload-status error';
+status.textContent = 'Saved in this browser, but could not reach the publish service (connection dropped partway through uploading ' + bodyMB + ' MB). Check your internet connection and try again — keep this tab open and awake the whole time.';
+resolve();
+};
+xhr.ontimeout = () => {
+status.className = 'upload-status error';
+status.textContent = 'Saved in this browser, but publishing timed out uploading ' + bodyMB + ' MB. Try a faster/more stable connection, or shrink the photos in the spreadsheet before uploading.';
+resolve();
+};
+xhr.send(reqBody);
+});
+} catch(err){
+status.className = 'upload-status error';
+status.textContent = 'Saved in this browser, but could not reach the publish service: ' + err.message;
 }
 
 function handleWorkbookFile(file){
