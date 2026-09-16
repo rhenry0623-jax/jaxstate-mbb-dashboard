@@ -39,7 +39,7 @@ for row in ws.iter_rows(min_row=2, values_only=True):
         continue
     pos = row[1]
     height = row[2]
-    start_weight = clean_num(row[4])
+    start_weight = clean_num(row[3]) if clean_num(row[3]) is not None else clean_num(row[4])  # BODYWEIGHT col (D), fallback to first weigh-in date col (E) if blank
     weights = [clean_num(row[i]) for i in weight_date_idx]
     order.append(name)
     players[name] = {
